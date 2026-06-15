@@ -60,15 +60,23 @@ export function ProfilePage() {
       const { data: items } = await supabase
         .from('order_items')
         .select(`
-          id, quantity, price,
-          product:products(id, name, slug, product_images(image_url)),
-          variant:product_variants(id, color, size)
+          id, quantity,
+          product:products(id, name, slug, base_price, sale_price, product_images(image_url)),
+          variant:product_variants(id, color, size, price)
         `)
         .eq('order_id', trackingOrderId);
         
+      const mappedItems = (items || []).map((item: any) => {
+        const itemPrice = item.variant?.price || item.product?.sale_price || item.product?.base_price || 0;
+        return {
+          ...item,
+          price: itemPrice
+        };
+      });
+        
       return {
         ...order,
-        items: items || []
+        items: mappedItems
       };
     },
     enabled: !!trackingOrderId

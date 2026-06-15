@@ -23,6 +23,7 @@ export function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: addresses } = useQuery({
     queryKey: ['addresses', user?.id],
@@ -106,6 +107,7 @@ export function CheckoutPage() {
     if (!user || cartItems?.length === 0) return;
     
     setPlacingOrder(true);
+    setErrorMessage(null);
     
     try {
       let finalAddressId = selectedAddressId;
@@ -140,6 +142,10 @@ export function CheckoutPage() {
         .insert({
           user_id: user.id,
           total_amount: subtotal,
+          subtotal: subtotal,
+          discount: 0,
+          payment_method: paymentMethod || 'cod',
+          payment_status: 'pending',
           status: 'pending',
           address_id: finalAddressId
         })
@@ -156,8 +162,7 @@ export function CheckoutPage() {
         order_id: orderData.id,
         product_id: item.product_id,
         variant_id: item.variant_id,
-        quantity: item.quantity,
-        price: item.variant?.price || item.product?.price || 0
+        quantity: item.quantity
       }));
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -173,7 +178,7 @@ export function CheckoutPage() {
 
     } catch (err: any) {
       console.error("Order placement failed:", err);
-      alert(err.message || 'Payment/Order failed');
+      setErrorMessage(err.message || 'Payment/Order failed');
     } finally {
       setPlacingOrder(false);
     }
@@ -270,6 +275,14 @@ export function CheckoutPage() {
               </label>
             </div>
           </section>
+
+          {errorMessage && (
+            <div className="p-4 bg-red-50 text-red-800 border border-red-200 text-sm rounded-none font-medium animate-in fade-in duration-200">
+              <p className="font-semibold uppercase tracking-wider text-xs">Order Placement Error</p>
+              <p className="mt-1 text-xs opacity-90">{errorMessage}</p>
+              <p className="mt-2 text-[11px] text-red-600">Please verify your details and try again, or contact support if the issue persists.</p>
+            </div>
+          )}
 
           <Button type="submit" disabled={placingOrder} className="w-full h-14 rounded-none uppercase tracking-widest text-lg">
             {placingOrder ? "Placing Order..." : "Place Order"}
