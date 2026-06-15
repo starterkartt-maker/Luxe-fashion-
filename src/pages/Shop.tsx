@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import { Link, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { Skeleton } from "../components/ui/skeleton";
 import { Product } from "../types";
 import { Filter, ChevronDown } from "lucide-react";
@@ -9,10 +9,36 @@ import { motion } from "motion/react";
 
 export function Shop() {
   const [searchParams] = useSearchParams();
-  const categoryId = searchParams.get('category');
+  const { id: routeId } = useParams();
   
+  const isCategoryRoute = window.location.pathname.includes('/categories/');
+  const isCollectionRoute = window.location.pathname.includes('/collections/');
+  
+  const categoryId = isCategoryRoute ? routeId : searchParams.get('category');
+  const collectionId = isCollectionRoute ? routeId : searchParams.get('collection');
+  
+  const { data: categoryData } = useQuery({
+    queryKey: ['category-name', categoryId],
+    queryFn: async () => {
+      if (!categoryId) return null;
+      const { data } = await supabase.from('categories').select('name').eq('id', categoryId).single();
+      return data;
+    },
+    enabled: !!categoryId
+  });
+
+  const { data: collectionData } = useQuery({
+    queryKey: ['collection-name', collectionId],
+    queryFn: async () => {
+      if (!collectionId) return null;
+      const { data } = await supabase.from('collections').select('name, description').eq('id', collectionId).single();
+      return data;
+    },
+    enabled: !!collectionId
+  });
+
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products', categoryId],
+    queryKey: ['products', categoryId, collectionId],
     queryFn: async () => {
       let query = supabase.from('products').select(`
         *,
@@ -21,6 +47,9 @@ export function Shop() {
       
       if (categoryId) {
         query = query.eq('category_id', categoryId);
+      }
+      if (collectionId) {
+        query = query.eq('collection_id', collectionId);
       }
       
       const { data } = await query;
@@ -34,13 +63,16 @@ export function Shop() {
     }
   });
 
+  const pageTitle = categoryData?.name || collectionData?.name || "Shop All";
+  const pageSubtitle = collectionData?.description || (categoryData ? `Explore our premium curation of ${categoryData.name}` : "Discover our latest premium collection");
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-editorial font-medium mb-2">Shop All</h1>
-          <p className="text-muted-foreground text-sm">Discover our latest collection</p>
+          <h1 className="text-3xl font-editorial font-medium mb-2">{pageTitle}</h1>
+          <p className="text-muted-foreground text-sm">{pageSubtitle}</p>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="outline" className="rounded-none gap-2 flex-1 md:flex-none">

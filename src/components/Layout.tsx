@@ -3,10 +3,28 @@ import { Link } from "react-router";
 import { Search, ShoppingBag, Heart, User, Menu, X, LayoutGrid } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { SearchModal } from "./SearchModal";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "../lib/supabase";
 
 export function Layout() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const { data: categories } = useQuery({
+    queryKey: ['navbar_categories'],
+    queryFn: async () => {
+      const { data } = await supabase.from('categories').select('*');
+      return data || [];
+    }
+  });
+
+  const { data: collections } = useQuery({
+    queryKey: ['navbar_collections'],
+    queryFn: async () => {
+      const { data } = await supabase.from('collections').select('*').eq('active', true);
+      return data || [];
+    }
+  });
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -21,10 +39,29 @@ export function Layout() {
               Luxe Fashion
             </Link>
             <nav className="hidden md:flex items-center gap-6 text-sm font-medium ml-6">
-              <Link to="/shop" className="hover:text-black/70 transition-colors">Shop</Link>
-              <Link to="/categories/women" className="hover:text-black/70 transition-colors">Women</Link>
-              <Link to="/categories/men" className="hover:text-black/70 transition-colors">Men</Link>
-              <Link to="/collections" className="hover:text-black/70 transition-colors">Collections</Link>
+              <Link to="/shop" className="hover:text-black/70 transition-colors">Shop All</Link>
+              
+              {/* Dynamic Categories */}
+              {categories && categories.map((cat: any) => (
+                <Link 
+                  key={cat.id} 
+                  to={`/categories/${cat.id}`} 
+                  className="hover:text-black/70 transition-colors truncate max-w-[120px]"
+                >
+                  {cat.name}
+                </Link>
+              ))}
+
+              {/* Dynamic Collections */}
+              {collections && collections.map((col: any) => (
+                <Link 
+                  key={col.id} 
+                  to={`/collections/${col.id}`} 
+                  className="hover:text-black/70 transition-colors truncate max-w-[150px] font-semibold border-l border-neutral-300 pl-3"
+                >
+                  {col.name}
+                </Link>
+              ))}
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -76,12 +113,43 @@ export function Layout() {
               <X className="w-6 h-6" />
             </button>
           </div>
-          <nav className="flex flex-col p-6 space-y-6 text-lg font-medium">
+          <nav className="flex flex-col p-6 space-y-6 text-lg font-medium overflow-y-auto max-h-[70vh]">
             <Link to="/" className="hover:text-black/70" onClick={() => setIsMenuOpen(false)}>Home</Link>
             <Link to="/shop" className="hover:text-black/70" onClick={() => setIsMenuOpen(false)}>Shop All</Link>
-            <Link to="/categories/women" className="hover:text-black/70" onClick={() => setIsMenuOpen(false)}>Women</Link>
-            <Link to="/categories/men" className="hover:text-black/70" onClick={() => setIsMenuOpen(false)}>Men</Link>
-            <Link to="/collections" className="hover:text-black/70" onClick={() => setIsMenuOpen(false)}>Collections</Link>
+            
+            {/* Dynamic Categories in Mobile Menu */}
+            {categories && categories.length > 0 && (
+              <div className="flex flex-col space-y-3 pt-2 pl-2 border-l border-neutral-200">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Categories</span>
+                {categories.map((cat: any) => (
+                  <Link 
+                    key={cat.id} 
+                    to={`/categories/${cat.id}`} 
+                    className="hover:text-black/70 text-base" 
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Dynamic Collections in Mobile Menu */}
+            {collections && collections.length > 0 && (
+              <div className="flex flex-col space-y-3 pt-2 pl-2 border-l border-neutral-200">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Collections</span>
+                {collections.map((col: any) => (
+                  <Link 
+                    key={col.id} 
+                    to={`/collections/${col.id}`} 
+                    className="hover:text-black/70 text-base font-semibold" 
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {col.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </nav>
         </div>
       )}
