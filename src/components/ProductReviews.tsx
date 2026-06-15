@@ -82,7 +82,6 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   const submitReviewMutation = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Please log in to leave a review.");
-      if (!hasPurchased) throw new Error("Purchase required to review this product.");
       if (!reviewText.trim()) throw new Error("Please share some feedback.");
 
       const payload = {
@@ -90,7 +89,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         product_id: productId,
         rating,
         review_text: reviewText.trim(),
-        verified_purchase: true
+        verified_purchase: hasPurchased
       };
 
       const { data, error } = await supabase
@@ -103,7 +102,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
       return data;
     },
     onSuccess: () => {
-      setSuccessMsg("Thank you! Your verified review has been published.");
+      setSuccessMsg("Thank you! Your review has been published.");
       setReviewText("");
       setRating(5);
       setErrorMsg(null);
@@ -188,10 +187,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
           <div className="border border-neutral-200 p-6 md:p-8 space-y-6">
             <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
               <h4 className="font-editorial text-lg font-medium text-neutral-900 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-neutral-500" /> Write Verified Review
+                <Sparkles className="w-4 h-4 text-neutral-500" /> Write a Review
               </h4>
               <span className="text-[10px] uppercase font-semibold text-neutral-400 tracking-widest flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Verified Purchase Only
+                <ShieldCheck className="w-3.5 h-3.5 text-neutral-500" /> Community Feedback
               </span>
             </div>
 
@@ -206,21 +205,6 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                   >
                     Authenticate
                   </Button>
-                </div>
-              </div>
-            ) : isPurchaseChecking ? (
-              <div className="flex items-center justify-center py-6 gap-2 text-xs text-neutral-400 font-mono">
-                <div className="animate-spin w-4 h-4 border-2 border-neutral-900 border-t-transparent rounded-full" />
-                VERIFYING LUXE ORDER HISTORY...
-              </div>
-            ) : !hasPurchased ? (
-              <div className="bg-amber-50/40 border border-amber-200/50 p-4 rounded-none flex gap-3 text-neutral-700">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-neutral-900">Purchase Verification Required</p>
-                  <p className="text-xs text-neutral-600 leading-relaxed">
-                    This silhouette is currently locked for reviewing. To ensure our catalog retains elite authentic ratings, writing reviews is restricted to customers who have ordered and received this piece.
-                  </p>
                 </div>
               </div>
             ) : (
