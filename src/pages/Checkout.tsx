@@ -137,6 +137,14 @@ export function CheckoutPage() {
       }
 
       // 1. Create Order
+      const itemsSummary = cartItems?.map((item: any) => {
+        const product_name = item.product?.name || item.product?.title || 'Unknown Product';
+        const color = item.variant?.color || null;
+        const size = item.variant?.size || null;
+        const variantStr = (color || size) ? ` (${size ? 'Size: ' + size : ''}${size && color ? ', ' : ''}${color ? 'Colour: ' + color : ''})` : '';
+        return `${product_name}${variantStr} x ${item.quantity}`;
+      }).join(', ') || '';
+
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -147,7 +155,8 @@ export function CheckoutPage() {
           payment_method: paymentMethod || 'cod',
           payment_status: 'pending',
           status: 'pending',
-          address_id: finalAddressId
+          address_id: finalAddressId,
+          notes: itemsSummary
         })
         .select('id')
         .single();
@@ -160,12 +169,13 @@ export function CheckoutPage() {
       // 2. Insert Order Items
       const orderItems = cartItems.map((item: any) => {
         const price = item.variant?.price || item.product?.price || 0;
+        const fallbackName = item.product?.name || item.product?.title || 'Unknown Product';
         return {
           order_id: orderData.id,
           product_id: item.product_id,
           variant_id: item.variant_id,
           quantity: item.quantity,
-          product_name: item.product?.name || 'Unknown Product',
+          product_name: String(fallbackName),
           unit_price: price,
           total_price: price * item.quantity,
           color: item.variant?.color || null,

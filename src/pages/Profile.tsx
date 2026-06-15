@@ -36,7 +36,14 @@ export function ProfilePage() {
     queryKey: ['orders', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      const { data } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
       return data;
     },
     enabled: !!user
@@ -340,16 +347,43 @@ export function ProfilePage() {
                       <div 
                         key={order.id} 
                         onClick={() => setTrackingOrderId(order.id)}
-                        className="border border-border p-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-background hover:border-black cursor-pointer transition-colors"
+                        className="border border-border p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-background hover:border-black cursor-pointer transition-colors"
                       >
-                        <div>
-                          <p className="font-semibold text-sm text-neutral-900">Order #{order.id.slice(0,8)}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">Ordered: {new Date(order.created_at).toLocaleDateString()}</p>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="font-semibold text-sm text-neutral-900">Order #{order.id.slice(0,8)}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Ordered: {new Date(order.created_at).toLocaleDateString()}</p>
+                          </div>
+                          
+                          {/* List of items inside this order */}
+                          <div className="space-y-1.5 pt-1.5 border-t border-neutral-100 mt-2">
+                            {order.order_items && order.order_items.length > 0 ? (
+                              order.order_items.map((item: any, idx: number) => {
+                                const variantDetail = (item.size || item.color)
+                                  ? ` - ${item.size || 'Standard'} / ${item.color || 'Standard'}`
+                                  : '';
+                                return (
+                                  <p key={idx} className="text-xs text-neutral-600 flex items-center gap-1.5 font-medium">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                                    <span>{item.product_name || 'Unknown Product'}{variantDetail}</span>
+                                    <span className="text-neutral-400 font-normal">× {item.quantity}</span>
+                                  </p>
+                                );
+                              })
+                            ) : order.notes ? (
+                              <p className="text-xs text-neutral-600 flex items-center gap-1.5 font-medium italic">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                                <span>{order.notes}</span>
+                              </p>
+                            ) : (
+                              <p className="text-xs text-neutral-400 italic">No details available for this order</p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex gap-4 items-center w-full md:w-auto mt-2 md:mt-0 justify-between md:justify-end">
                           <span className="text-[10px] font-bold px-2.5 py-1 bg-neutral-100 rounded-sm uppercase tracking-wider text-neutral-700">{order.status}</span>
                           <p className="font-semibold text-sm text-neutral-900 ml-4">₹{order.total_amount}</p>
-                          <span className="text-xs text-neutral-400 font-semibold uppercase tracking-wider ml-2 hidden md:block">Track →</span>
+                          <span className="text-xs text-neutral-450 font-semibold uppercase tracking-wider ml-2 hidden md:block">Track →</span>
                         </div>
                       </div>
                     ))}
