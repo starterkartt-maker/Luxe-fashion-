@@ -24,6 +24,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['reviews', productId],
     queryFn: async () => {
+      // First try fetching with join
       const { data, error } = await supabase
         .from('reviews')
         .select(`
@@ -37,8 +38,42 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Error fetching reviews:", error);
-        throw error;
+        console.warn("Reviews foreign key join failed. Falling back to simple query...", error);
+        
+        // Fall back to a simple select of reviews
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('product_id', productId)
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) {
+          console.error("Simple select also failed:", fallbackError);
+          throw fallbackError;
+        }
+
+        if (!fallbackData || fallbackData.length === 0) {
+          return [];
+        }
+
+        // Fetch corresponding profile details manually in memory
+        const userIds = Array.from(new Set(fallbackData.map(r => r.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+
+          if (profilesData && profilesData.length > 0) {
+            const profileMap = new Map(profilesData.map(p => [p.id, p]));
+            return fallbackData.map(rev => ({
+              ...rev,
+              profiles: profileMap.get(rev.user_id) || null
+            }));
+          }
+        }
+
+        return fallbackData;
       }
       return data || [];
     }
