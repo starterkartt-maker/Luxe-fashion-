@@ -75,7 +75,7 @@ export function CheckoutPage() {
         .select(`
           id, quantity, product_id, variant_id,
           product:products(id, name, base_price, sale_price),
-          variant:product_variants(id, price)
+          variant:product_variants(id, color, size, price)
         `)
         .eq('user_id', user.id);
       
@@ -158,12 +158,20 @@ export function CheckoutPage() {
       }
 
       // 2. Insert Order Items
-      const orderItems = cartItems.map((item: any) => ({
-        order_id: orderData.id,
-        product_id: item.product_id,
-        variant_id: item.variant_id,
-        quantity: item.quantity
-      }));
+      const orderItems = cartItems.map((item: any) => {
+        const price = item.variant?.price || item.product?.price || 0;
+        return {
+          order_id: orderData.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          quantity: item.quantity,
+          product_name: item.product?.name || 'Unknown Product',
+          unit_price: price,
+          total_price: price * item.quantity,
+          color: item.variant?.color || null,
+          size: item.variant?.size || null
+        };
+      });
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;

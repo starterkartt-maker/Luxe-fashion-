@@ -60,17 +60,20 @@ export function ProfilePage() {
       const { data: items } = await supabase
         .from('order_items')
         .select(`
-          id, quantity,
+          id, quantity, product_id, variant_id, product_name, unit_price, total_price, color, size,
           product:products(id, name, slug, base_price, sale_price, product_images(image_url)),
           variant:product_variants(id, color, size, price)
         `)
         .eq('order_id', trackingOrderId);
         
       const mappedItems = (items || []).map((item: any) => {
-        const itemPrice = item.variant?.price || item.product?.sale_price || item.product?.base_price || 0;
+        const itemPrice = item.unit_price || item.variant?.price || item.product?.sale_price || item.product?.base_price || 0;
         return {
           ...item,
-          price: itemPrice
+          price: itemPrice,
+          name: item.product_name || item.product?.name || 'Unknown Product',
+          itemColor: item.color || item.variant?.color,
+          itemSize: item.size || item.variant?.size
         };
       });
         
@@ -304,14 +307,14 @@ export function ProfilePage() {
                                 <div className="w-12 aspect-[3/4] bg-neutral-50 border border-neutral-200/50 flex-shrink-0">
                                   <img 
                                     src={item.product?.product_images?.[0]?.image_url || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000'} 
-                                    alt={item.product?.name} 
+                                    alt={item.name} 
                                     className="w-full h-full object-cover" 
                                   />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold text-neutral-950 leading-tight truncate">{item.product?.name}</p>
+                                  <p className="text-xs font-bold text-neutral-950 leading-tight truncate">{item.name}</p>
                                   <p className="text-[10px] text-neutral-500 font-medium mt-0.5">
-                                    {item.variant ? `Size: ${item.variant.size}, Colour: ${item.variant.color}` : 'Standard Silhouette'}
+                                    {(item.itemSize || item.itemColor) ? `Size: ${item.itemSize || 'Standard'}, Colour: ${item.itemColor || 'Standard'}` : 'Standard Silhouette'}
                                   </p>
                                   <p className="text-[11px] font-semibold text-neutral-800 mt-1">{item.quantity} × ₹{item.price}</p>
                                 </div>

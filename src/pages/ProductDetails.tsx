@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 import { useParams, Link, useNavigate } from "react-router";
-import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { cn } from "../lib/utils";
 import { useAuth } from "../hooks/useAuth";
+import { ProductReviews } from "../components/ProductReviews";
 
 export function ProductDetails() {
   const { id } = useParams();
@@ -173,7 +174,52 @@ export function ProductDetails() {
         {/* Info */}
         <div className="flex flex-col space-y-8">
           <div>
-            <h1 className="text-3xl font-editorial font-medium mb-3 text-neutral-900">{product.title}</h1>
+            <h1 className="text-3xl font-editorial font-medium mb-1 text-neutral-900">{product.title}</h1>
+            
+            {/* Top Stars Summary */}
+            <div className="flex items-center gap-2 mb-3">
+              {product.average_rating !== undefined && product.average_rating > 0 ? (
+                <button 
+                  onClick={() => {
+                    document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 group cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star 
+                        key={star} 
+                        className={cn(
+                          "w-3.5 h-3.5", 
+                          star <= Math.round(product.average_rating || 0) ? "fill-neutral-900 text-neutral-900" : "text-neutral-300"
+                        )} 
+                      />
+                    ))}
+                  </div>
+                  <span className="text-xs font-semibold text-neutral-850 group-hover:underline">
+                    {product.average_rating.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-neutral-400">
+                    ({product.total_reviews} {product.total_reviews === 1 ? 'review' : 'reviews'})
+                  </span>
+                </button>
+              ) : (
+                <button 
+                  onClick={() => {
+                    document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-xs text-neutral-400 hover:text-neutral-600 flex items-center gap-1"
+                >
+                  <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} className="w-3.5 h-3.5 text-neutral-200" />
+                    ))}
+                  </div>
+                  <span>No reviews yet — be the first to share!</span>
+                </button>
+              )}
+            </div>
+
             <p className="text-xl font-medium text-neutral-900">₹{product.price}</p>
           </div>          <div className="space-y-6">
             {uniqueColors.length > 0 && (
@@ -259,6 +305,9 @@ export function ProductDetails() {
           </div>
         </div>
       </div>
+
+      {/* Product Reviews Component */}
+      <ProductReviews productId={product.id} />
     </div>
   );
 }
