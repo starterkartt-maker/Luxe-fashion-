@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Search, ShoppingBag, Heart, User, Menu, X, LayoutGrid } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { SearchModal } from "./SearchModal";
+import { Footer } from "./Footer";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 
@@ -157,6 +158,8 @@ export function Layout() {
       <main className="flex-1 pb-20 md:pb-0">
         <Outlet />
       </main>
+
+      <Footer />
 
       {/* Mobile Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t py-2 px-6 flex items-center justify-between">
