@@ -50,6 +50,68 @@ export function ProductDetails() {
   const uniqueSizes = Array.from(new Set(variants.map((v: any) => v.size).filter(Boolean)));
   const uniqueColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean)));
 
+  // Fetch reviews for dynamic star & count updates
+  const { data: reviews } = useQuery({
+    queryKey: ['reviews', product?.id],
+    queryFn: async () => {
+      if (!product?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          profiles:user_id (
+            id,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('product_id', product.id)
+          .order('created_at', { ascending: false });
+
+        if (fallbackError) {
+          throw fallbackError;
+        }
+
+        if (!fallbackData || fallbackData.length === 0) {
+          return [];
+        }
+
+        const userIds = Array.from(new Set(fallbackData.map(r => r.user_id).filter(Boolean)));
+        if (userIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+
+          if (profilesData && profilesData.length > 0) {
+            const profileMap = new Map(profilesData.map(p => [p.id, p]));
+            return fallbackData.map(rev => ({
+              ...rev,
+              profiles: profileMap.get(rev.user_id) || null
+            }));
+          }
+        }
+
+        return fallbackData;
+      }
+      return data || [];
+    },
+    enabled: !!product?.id
+  });
+
+  const totalReviews = reviews?.length || 0;
+  const averageRating = reviews && reviews.length > 0
+    ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
+    : 0;
+
   useEffect(() => {
     if (product && variants.length > 0) {
       const firstWithColor = variants.find((v: any) => v.color);
@@ -178,7 +240,7 @@ export function ProductDetails() {
             
             {/* Top Stars Summary */}
             <div className="flex items-center gap-2 mb-3">
-              {product.average_rating !== undefined && product.average_rating > 0 ? (
+              {totalReviews > 0 ? (
                 <button 
                   onClick={() => {
                     document.getElementById('product-reviews-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -191,16 +253,16 @@ export function ProductDetails() {
                         key={star} 
                         className={cn(
                           "w-3.5 h-3.5", 
-                          star <= Math.round(product.average_rating || 0) ? "fill-neutral-900 text-neutral-900" : "text-neutral-300"
+                          star <= Math.round(averageRating) ? "fill-neutral-900 text-neutral-900" : "text-neutral-300"
                         )} 
                       />
                     ))}
                   </div>
                   <span className="text-xs font-semibold text-neutral-850 group-hover:underline">
-                    {product.average_rating.toFixed(1)}
+                    {averageRating.toFixed(1)}
                   </span>
                   <span className="text-xs text-neutral-400">
-                    ({product.total_reviews} {product.total_reviews === 1 ? 'review' : 'reviews'})
+                    ({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})
                   </span>
                 </button>
               ) : (
